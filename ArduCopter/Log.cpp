@@ -836,6 +836,29 @@ void Copter::Log_Write_Beacon()
     DataFlash.Log_Write_Beacon(g2.beacon);
 }
 
+struct PACKED log_Guided {
+    LOG_PACKET_HEADER;
+    uint64_t time_us;
+    float target_roll;          // target roll
+    float target_pitch;         // target pitch
+    float target_yaw_rate;      // target yaw rate
+    uint64_t target_time;       // time at which target was updated
+};
+
+void Copter::Log_Write_Guided(float roll, float pitch, float yaw_rate, uint64_t timestamp)
+{
+    struct log_Guided pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_GUIDED_ALTHOLD_MSG),
+        time_us     : AP_HAL::micros64(),
+        target_roll : roll,
+        target_pitch : pitch,
+        target_yaw_rate : yaw_rate,
+        target_time     : timestamp
+    };
+
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+}
+
 const struct LogStructure Copter::log_structure[] = {
     LOG_COMMON_STRUCTURES,
 #if AUTOTUNE_ENABLED == ENABLED
@@ -880,6 +903,8 @@ const struct LogStructure Copter::log_structure[] = {
       "THRO",  "QBffffbbbb",  "TimeUS,Stage,Vel,VelZ,Acc,AccEfZ,Throw,AttOk,HgtOk,PosOk" },
     { LOG_PROXIMITY_MSG, sizeof(log_Proximity),
       "PRX",   "QBfffffffffff","TimeUS,Health,D0,D45,D90,D135,D180,D225,D270,D315,DUp,CAn,CDis" },
+    { LOG_GUIDED_ALTHOLD_MSG, sizeof(log_Guided),
+      "GAH", "QfffQ", "TimeUS,DesRoll,DesPitch,DesYawRate,UpdTimeUS" },
 };
 
 #if CLI_ENABLED == ENABLED
@@ -984,6 +1009,7 @@ void Copter::Log_Write_Throw(ThrowModeStage stage, float velocity, float velocit
 void Copter::Log_Write_Proximity() {}
 void Copter::Log_Write_Beacon() {}
 void Copter::Log_Write_Vehicle_Startup_Messages() {}
+void Copter::Log_Write_Guided(float roll, float pitch, float yaw_rate, uint64_t timestamp) {}
 
 #if FRAME_CONFIG == HELI_FRAME
 void Copter::Log_Write_Heli() {}

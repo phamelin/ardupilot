@@ -104,6 +104,7 @@ enum control_mode_t {
     THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
     AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
     GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
+    GUIDED_ALTHOLD = 50,// guided alt-hold mode
 };
 
 enum mode_reason_t {
@@ -319,6 +320,7 @@ enum DevOptions {
 #define LOG_GUIDEDTARGET_MSG            0x22
 #define LOG_THROW_MSG                   0x23
 #define LOG_PROXIMITY_MSG               0x24
+#define LOG_GUIDED_ALTHOLD_MSG          0x50
 
 #define MASK_LOG_ATTITUDE_FAST          (1<<0)
 #define MASK_LOG_ATTITUDE_MED           (1<<1)
@@ -504,3 +506,10 @@ enum DevOptions {
 #define THR_BEHAVE_FEEDBACK_FROM_MID_STICK (1<<0)
 #define THR_BEHAVE_HIGH_THROTTLE_CANCELS_LAND (1<<1)
 #define THR_BEHAVE_DISARM_ON_LAND_DETECT (1<<2)
+
+// for mavlink SET_ATTITUDE_TARGET messages
+#define MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_ROLL_RATE_IGNORE     (1<<0)
+#define MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_PITCH_RATE_IGNORE    (1<<1)
+#define MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_YAW_RATE_IGNORE      (1<<2)
+#define MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_THRUST_IGNORE             (1<<6)
+#define MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_ATTITUDE_IGNORE           (1<<7)

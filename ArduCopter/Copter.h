@@ -715,6 +715,7 @@ private:
     void gcs_check_input(void);
     void gcs_send_text(MAV_SEVERITY severity, const char *str);
     void do_erase_logs(void);
+    void Log_Write_Guided(float roll, float pitch, float yaw_rate, uint64_t timestamp);
     void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float meas_target, float meas_min, float meas_max, float new_gain_rp, float new_gain_rd, float new_gain_sp, float new_ddt);
     void Log_Write_AutoTuneDetails(float angle_cd, float rate_cds);
     void Log_Write_Current();
@@ -784,6 +785,14 @@ private:
     void get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int16_t yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
     bool althold_init(bool ignore_checks);
     void althold_run();
+    bool guided_althold_init(bool ignore_checks);
+    void guided_althold_run();
+    void guided_althold_set_target_attitude(float roll, float pitch);
+    void guided_althold_unset_target_attitude();
+    void guided_althold_set_target_yaw_rate(float yaw_rate);
+    void guided_althold_unset_target_yaw_rate();
+    void guided_althold_check_timeout();
+    void guided_althold_reset_timeout();
     bool auto_init(bool ignore_checks);
     void auto_run();
     void auto_takeoff_start(const Location& dest_loc);

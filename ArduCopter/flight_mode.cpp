@@ -118,6 +118,10 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = guided_nogps_init(ignore_checks);
             break;
 
+        case GUIDED_ALTHOLD:
+            success = guided_althold_init(ignore_checks);
+            break;
+
         default:
             success = false;
             break;
@@ -257,6 +261,10 @@ void Copter::update_flight_mode()
 
         case GUIDED_NOGPS:
             guided_nogps_run();
+            break;
+
+        case GUIDED_ALTHOLD:
+            guided_althold_run();
             break;
 
         default:
@@ -431,6 +439,9 @@ void Copter::notify_flight_mode(control_mode_t mode)
             break;
         case GUIDED_NOGPS:
             notify.set_flight_mode_str("GNGP");
+            break;
+        case GUIDED_ALTHOLD:
+            notify.set_flight_mode_str("GUIDED_ALTHOLD");
             break;
         default:
             notify.set_flight_mode_str("----");

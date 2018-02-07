@@ -731,11 +731,15 @@ GCS_MAVLINK_Copter::data_stream_send(void)
 
     if (stream_trigger(STREAM_EXTENDED_STATUS)) {
         send_message(MSG_EXTENDED_STATUS1); // SYS_STATUS, POWER_STATUS
-        send_message(MSG_EXTENDED_STATUS2); // MEMINFO
-        send_message(MSG_CURRENT_WAYPOINT);
-        send_message(MSG_GPS_RAW);
-        send_message(MSG_NAV_CONTROLLER_OUTPUT);
-        send_message(MSG_FENCE_STATUS);
+
+        // Unload communication in GUIDED_ALTHOLD
+        if(copter.control_mode != GUIDED_ALTHOLD) {
+            send_message(MSG_EXTENDED_STATUS2); // MEMINFO
+            send_message(MSG_CURRENT_WAYPOINT);
+            send_message(MSG_GPS_RAW);
+            send_message(MSG_NAV_CONTROLLER_OUTPUT);
+            send_message(MSG_FENCE_STATUS);
+        }
     }
 
     if (copter.gcs_out_of_time) return;
@@ -1596,38 +1600,95 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         mavlink_set_attitude_target_t packet;
         mavlink_msg_set_attitude_target_decode(msg, &packet);
 
-        // exit if vehicle is not in Guided mode or Auto-Guided mode
-        if ((copter.control_mode != GUIDED) && (copter.control_mode != GUIDED_NOGPS) && !(copter.control_mode == AUTO && copter.auto_mode == Auto_NavGuided)) {
-            break;
+        // For logging purpose
+        // Log timestamp even if the proper control mode is not active
+        uint64_t guided_target_time = AP_HAL::micros64();
+        float guided_target_roll_deg = 0.0f;
+        float guided_target_pitch_deg = 0.0f;
+        float guided_target_yaw_rate_degs = 0.0f;
+
+        if(copter.control_mode == GUIDED_ALTHOLD)
+        {
+            /* For future usage.
+             bool roll_rate_ignore = packet.type_mask & MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_ROLL_RATE_IGNORE;
+             bool pitch_rate_ignore = packet.type_mask & MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_PITCH_RATE_IGNORE;
+             bool thrust_ignore = packet.type_mask & MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_THRUST_IGNORE;
+             */
+
+             bool yaw_rate_ignore = packet.type_mask & MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_BODY_YAW_RATE_IGNORE;
+             bool attitude_ignore = packet.type_mask & MAVLINK_SET_ATTITUDE_TARGET_TYPE_MASK_ATTITUDE_IGNORE;
+
+             // The GUIDED_ALTHOLD mode only support attitude and yaw rate
+             // commands.
+
+             if(attitude_ignore)
+             {
+                 copter.guided_althold_unset_target_attitude();
+             }
+             else
+             {
+                 // Compute target roll/pitch from Quaternion
+                 float target_roll, target_pitch, target_yaw;
+                 Quaternion rp_target(packet.q[0], packet.q[1], packet.q[2], packet.q[3]);
+                 rp_target.to_euler(target_roll, target_pitch, target_yaw);
+
+                 // For logging purpose (in deg)
+                 guided_target_roll_deg = target_roll/M_PI*180.0;
+                 guided_target_pitch_deg = target_pitch/M_PI*180.0;
+
+                 copter.guided_althold_set_target_attitude(target_roll, target_pitch);
+             }
+
+             if(yaw_rate_ignore)
+             {
+                 copter.guided_althold_unset_target_yaw_rate();
+             }
+             else
+             {
+                 // For logging purpose (in deg/s)
+                 guided_target_yaw_rate_degs = packet.body_yaw_rate/M_PI*180.0;
+
+                 copter.guided_althold_set_target_yaw_rate(packet.body_yaw_rate);
+             }
+        }
+        else
+        {
+            // exit if vehicle is not in Guided mode or Auto-Guided mode
+            if ((copter.control_mode != GUIDED) && (copter.control_mode != GUIDED_NOGPS) && !(copter.control_mode == AUTO && copter.auto_mode == Auto_NavGuided)) {
+                break;
+            }
+
+            // ensure type_mask specifies to use attitude and thrust
+            if ((packet.type_mask & ((1<<7)|(1<<6))) != 0) {
+                break;
+            }
+
+            // convert thrust to climb rate
+            packet.thrust = constrain_float(packet.thrust, 0.0f, 1.0f);
+            float climb_rate_cms = 0.0f;
+            if (is_equal(packet.thrust, 0.5f)) {
+                climb_rate_cms = 0.0f;
+            } else if (packet.thrust > 0.5f) {
+                // climb at up to WPNAV_SPEED_UP
+                climb_rate_cms = (packet.thrust - 0.5f) * 2.0f * copter.wp_nav->get_speed_up();
+            } else {
+                // descend at up to WPNAV_SPEED_DN
+                climb_rate_cms = (0.5f - packet.thrust) * 2.0f * -fabsf(copter.wp_nav->get_speed_down());
+            }
+
+            // if the body_yaw_rate field is ignored, use the commanded yaw position
+            // otherwise use the commanded yaw rate
+            bool use_yaw_rate = false;
+            if ((packet.type_mask & (1<<2)) == 0) {
+                use_yaw_rate = true;
+            }
+
+            copter.guided_set_angle(Quaternion(packet.q[0],packet.q[1],packet.q[2],packet.q[3]),
+                climb_rate_cms, use_yaw_rate, packet.body_yaw_rate);
         }
 
-        // ensure type_mask specifies to use attitude and thrust
-        if ((packet.type_mask & ((1<<7)|(1<<6))) != 0) {
-            break;
-        }
-
-        // convert thrust to climb rate
-        packet.thrust = constrain_float(packet.thrust, 0.0f, 1.0f);
-        float climb_rate_cms = 0.0f;
-        if (is_equal(packet.thrust, 0.5f)) {
-            climb_rate_cms = 0.0f;
-        } else if (packet.thrust > 0.5f) {
-            // climb at up to WPNAV_SPEED_UP
-            climb_rate_cms = (packet.thrust - 0.5f) * 2.0f * copter.wp_nav->get_speed_up();
-        } else {
-            // descend at up to WPNAV_SPEED_DN
-            climb_rate_cms = (0.5f - packet.thrust) * 2.0f * -fabsf(copter.wp_nav->get_speed_down());
-        }
-
-        // if the body_yaw_rate field is ignored, use the commanded yaw position
-        // otherwise use the commanded yaw rate
-        bool use_yaw_rate = false;
-        if ((packet.type_mask & (1<<2)) == 0) {
-            use_yaw_rate = true;
-        }
-
-        copter.guided_set_angle(Quaternion(packet.q[0],packet.q[1],packet.q[2],packet.q[3]),
-            climb_rate_cms, use_yaw_rate, packet.body_yaw_rate);
+        // Log
+        copter.Log_Write_Guided(guided_target_roll_deg, guided_target_pitch_deg, guided_target_yaw_rate_degs, guided_target_time);
 
         break;
     }

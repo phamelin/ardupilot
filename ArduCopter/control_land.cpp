@@ -1,5 +1,7 @@
 #include "Copter.h"
 
+#define FORCE_LAND_NO_GPS
+
 static bool land_with_gps;
 
 static uint32_t land_start_time;
@@ -8,8 +10,13 @@ static bool land_pause;
 // land_init - initialise land controller
 bool Copter::land_init(bool ignore_checks)
 {
+#ifdef FORCE_LAND_NO_GPS
+    land_with_gps = false;
+#else
     // check if we have GPS and decide which LAND we're going to do
     land_with_gps = position_ok();
+#endif
+
     if (land_with_gps) {
         // set target to stopping point
         Vector3f stopping_point;

@@ -238,8 +238,8 @@ void Copter::guided_althold_run()
 void Copter::guided_althold_set_target_attitude(float roll, float pitch)
 {
     // Convert from radians to centi-degrees
-    guided_althold_state.target_roll_cd = (18000/M_PI_F)*roll;
-    guided_althold_state.target_pitch_cd = (18000/M_PI_F)*pitch;
+    guided_althold_state.target_roll_cd = (18000/M_PI)*roll;
+    guided_althold_state.target_pitch_cd = (18000/M_PI)*pitch;
     guided_althold_state.use_roll = true;
     guided_althold_state.use_pitch = true;
     guided_althold_reset_timeout();
@@ -255,7 +255,7 @@ void Copter::guided_althold_unset_target_attitude()
 void Copter::guided_althold_set_target_yaw_rate(float yaw_rate)
 {
     // Convert from radians/sec to centi-degrees/sec
-    guided_althold_state.target_yaw_rate_cds = (18000/M_PI_F)*yaw_rate;
+    guided_althold_state.target_yaw_rate_cds = (18000/M_PI)*yaw_rate;
     guided_althold_state.use_yaw_rate = true;
     guided_althold_reset_timeout();
 }

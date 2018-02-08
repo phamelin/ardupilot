@@ -11,5 +11,6 @@ RUN apt-get update && \
     cd ardupilot && \
     USER=`whoami` Tools/scripts/install-prereqs-ubuntu.sh -y && \
     cd .. && \
-    rm -rf ardupilot
+    rm -rf ardupilot && \
+    apt-get install -y python-pexpect
 

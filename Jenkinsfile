@@ -30,10 +30,18 @@ pipeline {
             }
         }
 
-        stage('Run tests') {
+        stage('Unit tests') {
             steps {
                 sh '''
                     ./waf check
+                '''
+            }
+        }
+
+        stage('Auto tests') {
+            steps {
+                sh '''
+                    ./Tools/autotest/autotest.py build.ArduCopter fly.ArduCopter
                 '''
             }
         }

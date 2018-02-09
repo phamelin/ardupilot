@@ -13,7 +13,7 @@ import shutil
 import time
 
 import pexpect
-from pymavlink import mavutil, mavwp
+from pymavlink import mavutil, mavwp, quaternion
 
 from common import *
 from pysim import util
@@ -924,6 +924,103 @@ def fly_mission(mavproxy, mav, height_accuracy=-1.0, target_altitude=None):
     wait_mode(mav, 'LOITER')
     return ret
 
+def send_set_attitude_target(mavproxy, mav, roll_deg, pitch_deg, yaw_rate_degs):
+    """Send a target attitude (roll/pitch/yaw rate) through Mavlink command SET_ATTITUDE_TARGET"""
+    print("Sending attitude target roll=%.2fdeg, pitch=%.2fdeg and yaw rate=%.2fdeg/s" % (roll_deg, pitch_deg, yaw_rate_degs))
+    yaw = 0;
+    q = quaternion.Quaternion((math.radians(roll_deg), math.radians(pitch_deg), math.radians(yaw)))
+    q.normalize()
+    yaw_rate = math.radians(yaw_rate_degs)
+    mav.mav.set_attitude_target_send(
+                                      0,  # system time in milliseconds
+                                      1,  # target system
+                                      0,  # target component
+                                      123, # type mask (ignore all except attitude + yaw rate)
+                                      q.q, # quaternion attitude
+                                      0,  # body roll rate
+                                      0,  # body pitch rate
+                                      yaw_rate,  # body yaw rate
+                                      0)  # thrust
+
+def wait_set_attitude_target(mavproxy, mav, roll_deg, pitch_deg, yaw_rate_degs, accuracy, timeout=30):
+    """Wait for a target roll/pitch/yaw rate in degrees"""
+    tstart = get_sim_time(mav)
+    print("Waiting attitude target roll=%.2fdeg, pitch=%.2fdeg and yaw rate=%.2fdeg/s for %f seconds" % (roll_deg, pitch_deg, yaw_rate_degs, timeout))
+    while get_sim_time(mav) < tstart + timeout:
+        send_set_attitude_target(mavproxy, mav, roll_deg, pitch_deg, yaw_rate_degs)
+        m = mav.recv_match(type='ATTITUDE', blocking=True)
+        p = math.degrees(m.pitch)
+        r = math.degrees(m.roll)
+        y_rate = math.degrees(m.yawspeed);
+        print("Roll %.2fdeg Pitch %.2fdeg Yaw rate %.2fdeg/s" % (r, p, y_rate))
+        if (math.fabs(r - roll_deg) <= accuracy) and (math.fabs(p - pitch_deg) <= accuracy) and (math.fabs(y_rate - yaw_rate_degs) <= accuracy):
+            print("Attained roll/pitch/yaw rate %.2f/%.2f/%.2f" % (roll_deg, pitch_deg, yaw_rate_degs))
+            return True
+    print("Failed to attain roll/pitch/yaw rate %.2f/%.2f/%.2f" % (roll_deg, pitch_deg, yaw_rate_degs))
+    return False
+
+def fly_guided_althold_test(mavproxy, mav):
+    """Fly in GUIDED_ALTHOLD with Mavlink set points."""
+    print("### Request GUIDED_ALTHOLD mode")
+    mavproxy.send("mode 50\n")
+    wait_mode(mav, 'Mode(50)')
+
+    print("### Test pilot climb control: climb to 20m")
+    change_alt(mavproxy, mav, 20.0)
+    # Distance in meters to be tested for manual pilot control
+    dist_test = 10;
+
+    print("### Test pilot forward pitch control")
+    mavproxy.send('rc 2 1300\n')
+    if not wait_distance(mav, dist_test, 2, dist_test):
+        print("Failed to reach distance of %u" % dist_test)
+        success = False
+    mavproxy.send('rc 2 1500\n')
+    wait_pitch(mav, 0.0, 0.5, timeout=10)
+
+    print("### Test pilot right (east) roll control")
+    mavproxy.send('rc 1 1700\n')
+    if not wait_distance(mav, dist_test, 2, dist_test):
+        print("Failed to reach distance of %u" % dist_test)
+        success = False
+    mavproxy.send('rc 1 1500\n')
+    wait_roll(mav, 0.0, 0.5, timeout=10)
+
+    print("### Test pilot yaw rate control")
+    print("turn right towards east")
+    mavproxy.send('rc 4 1580\n')
+    if not wait_heading(mav, 90):
+        print("Failed to reach heading")
+        success = False
+    print("turn left towards west")
+    mavproxy.send('rc 4 1420\n')
+    if not wait_heading(mav, 270):
+        print("Failed to reach heading")
+        success = False
+    mavproxy.send('rc 4 1500\n')
+
+    print("### Test attiude control trough Mavlink commands")
+    target_roll_deg = 20.0
+    target_pitch_deg = 0.0  # Pitch is disabled in firmware
+    target_yaw_rate_deg = 5.0;
+
+    send_set_attitude_target(mavproxy, mav, target_roll_deg, target_pitch_deg, target_yaw_rate_deg)
+    mavproxy.expect('APM: Ext. computer is back.')
+    if not wait_set_attitude_target(mavproxy, mav, target_roll_deg, target_pitch_deg, target_yaw_rate_deg, 0.5, 10):
+        print("Failed to control attitude through Mavlink commands")
+
+    print("### Test command timeout")
+    mavproxy.expect('APM: Ext. computer timeout!')
+
+    print("### Test pilot left (west) roll control after timeout")
+    mavproxy.send('rc 1 1300\n')
+    if not wait_distance(mav, dist_test, 2, dist_test):
+        print("Failed to reach distance of %u" % dist_test)
+        success = False
+    mavproxy.send('rc 1 1500\n')
+    wait_roll(mav, 0.0, 0.5, timeout=10)
+
+    return True
 
 def load_mission_from_file(mavproxy, mav, filename):
     """Load a mission from a file to flight controller."""
@@ -1265,6 +1362,25 @@ def fly_ArduCopter(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fal
         print("#")
         if not fly_RTL(mavproxy, mav):
             failed_test_msg = "fly_RTL after circle failed"
+            print(failed_test_msg)
+            failed = True
+
+        print("# Takeoff")
+        if not takeoff(mavproxy, mav, 10):
+            failed_test_msg = "takeoff failed"
+            print(failed_test_msg)
+            failed = True
+
+        print("# Guided althold test")
+        if not fly_guided_althold_test(mavproxy, mav):
+            failed_test_msg = "Guided althold failed"
+            print(failed_test_msg)
+            failed = True
+
+        # RTL
+        print("# RTL")
+        if not fly_RTL(mavproxy, mav):
+            failed_test_msg = "fly_RTL failed"
             print(failed_test_msg)
             failed = True
 

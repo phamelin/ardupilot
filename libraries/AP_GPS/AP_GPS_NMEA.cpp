@@ -275,10 +275,20 @@ bool AP_GPS_NMEA::_have_new_message()
         now - _last_VTG_ms > 150) {
         return false;
     }
+    if (_last_THS_ms != 0 &&
+        now - _last_THS_ms > 150) {
+        return false;
+    }
+
     // prevent these messages being used again
     if (_last_VTG_ms != 0) {
         _last_VTG_ms = 1;
     }
+
+    if (_last_THS_ms != 0) {
+        _last_THS_ms = 1;
+    }
+
     _last_GGA_ms = 1;
     _last_RMC_ms = 1;
     return true;
@@ -326,6 +336,11 @@ bool AP_GPS_NMEA::_term_complete()
                     fill_3d_velocity();
                     // VTG has no fix indicator, can't change fix status
                     break;
+                case _GPS_SENTENCE_THS:
+                    _last_THS_ms = now;
+                    state.true_heading = _new_true_heading*0.01f;
+                    state.true_heading_ok = _new_true_heading_ok;
+                    break;
                 }
             } else {
                 switch (_sentence_type) {
@@ -365,6 +380,8 @@ bool AP_GPS_NMEA::_term_complete()
             // VTG may not contain a data qualifier, presume the solution is good
             // unless it tells us otherwise.
             _gps_data_good = true;
+        } else if (strcmp(term_type, "THS") == 0) {
+            _sentence_type = _GPS_SENTENCE_THS;
         } else {
             _sentence_type = _GPS_SENTENCE_OTHER;
         }
@@ -435,6 +452,27 @@ bool AP_GPS_NMEA::_term_complete()
         case _GPS_SENTENCE_RMC + 8: // Course (GPRMC)
         case _GPS_SENTENCE_VTG + 1: // Course (VTG)
             _new_course = _parse_decimal_100(_term);
+            break;
+
+        // true heading
+        case _GPS_SENTENCE_THS + 1: // True heading (THS)
+            _new_true_heading = _parse_decimal_100(_term);
+            break;
+        case _GPS_SENTENCE_THS + 2: // True heading solution status
+            // Possible solution status:
+            // - A : Autonomous
+            // - E : Estimated (dead reckoning)
+            // - M : Manual input
+            // - S : Simulator
+            // - V : Data not valid
+            if(_term[0] == 'A' || _term[0] == 'E')
+            {
+                _new_true_heading_ok = true;
+            }
+            else
+            {
+                _new_true_heading_ok = false;
+            }
             break;
         }
     }

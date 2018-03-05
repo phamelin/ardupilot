@@ -129,6 +129,8 @@ public:
         Location location;                  ///< last fix location
         float ground_speed;                 ///< ground speed in m/sec
         float ground_course;                ///< ground course in degrees
+        float true_heading;                 ///< True heading in degrees
+        bool true_heading_ok;               ///< True heading is ok
         uint16_t hdop;                      ///< horizontal dilution of precision in cm
         uint16_t vdop;                      ///< vertical dilution of precision in cm
         uint8_t num_sats;                   ///< Number of visible satellites
@@ -236,6 +238,14 @@ public:
     }
     int32_t ground_course_cd() const {
         return ground_course_cd(primary_instance);
+    }
+
+    // true heading in degrees
+    float true_heading(uint8_t instance) const {
+        return state[instance].true_heading;
+    }
+    float true_heading() const {
+        return true_heading(primary_instance);
     }
 
     // number of locked satellites

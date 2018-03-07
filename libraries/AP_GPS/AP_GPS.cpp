@@ -252,6 +252,14 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("BLEND_TC", 21, AP_GPS, _blend_tc, 10.0f),
 
+    // @Param: HDG_OFS
+    // @DisplayName: Heading offset
+    // @Description: Heading measurement angle offset (rotation around z-axis).
+    // @Units: degrees
+    // @Range: -179.9 179.9
+    // @User: Advanced
+    AP_GROUPINFO("HDG_OFS", 22, AP_GPS, _heading_offset, 0.0f),
+
     AP_GROUPEND
 };
 

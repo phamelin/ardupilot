@@ -265,6 +265,11 @@ public:
         return true_heading_ms(primary_instance);
     }
 
+    // heading measurement offset
+    float true_heading_offset() const {
+        return _heading_offset.get();
+    }
+
     // number of locked satellites
     uint8_t num_sats(uint8_t instance) const {
         return state[instance].num_sats;
@@ -416,6 +421,7 @@ protected:
     AP_Int16 _delay_ms[GPS_MAX_RECEIVERS];
     AP_Int8 _blend_mask;
     AP_Float _blend_tc;
+    AP_Float _heading_offset;   // Heading sensor offset (rotation around z-axis) in degrees
 
 private:
     // return gps update rate in milliseconds

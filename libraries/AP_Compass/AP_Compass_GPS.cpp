@@ -61,13 +61,13 @@ void AP_Compass_GPS::read()
     }
 
     float true_heading = radians(_ahrs->get_gps().true_heading());
+    float true_heading_offset = radians(_ahrs->get_gps().true_heading_offset());
 
     // Get the DCM of the actual attitude from the AHRS (body to NED)
     Matrix3f rbn = _ahrs->get_rotation_body_to_ned();
 
     // Correct the DCM with the actual true heading
-    // TODO: Heading sensor offset is forced to zero for now
-    Matrix3f rbn_corrected = fuse_true_heading(rbn, true_heading, 0.0f);
+    Matrix3f rbn_corrected = fuse_true_heading(rbn, true_heading, true_heading_offset);
 
     // Convert the earth frame magnetic vector to body frame
     Vector3f field = rbn_corrected.mul_transpose(_compass._hil.Bearth);

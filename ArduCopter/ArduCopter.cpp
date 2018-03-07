@@ -644,4 +644,9 @@ void Copter::update_altitude()
     }
 }
 
+AP_AHRS_NavEKF& Copter::get_ahrs()
+{
+    return ahrs;
+}
+
 AP_HAL_MAIN_CALLBACKS(&copter);

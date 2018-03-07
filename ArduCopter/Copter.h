@@ -149,6 +149,7 @@ public:
     // HAL::Callbacks implementation.
     void setup() override;
     void loop() override;
+    AP_AHRS_NavEKF& get_ahrs();
 
 private:
     // key aircraft parameters passed to multiple libraries

@@ -338,6 +338,7 @@ bool AP_GPS_NMEA::_term_complete()
                     break;
                 case _GPS_SENTENCE_THS:
                     _last_THS_ms = now;
+                    state.true_heading_ms = now;
                     state.true_heading = _new_true_heading*0.01f;
                     state.true_heading_ok = _new_true_heading_ok;
                     break;

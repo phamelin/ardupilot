@@ -131,6 +131,7 @@ public:
         float ground_course;                ///< ground course in degrees
         float true_heading;                 ///< True heading in degrees
         bool true_heading_ok;               ///< True heading is ok
+        uint32_t true_heading_ms;           ///< Timestamp of the last true heading data
         uint16_t hdop;                      ///< horizontal dilution of precision in cm
         uint16_t vdop;                      ///< vertical dilution of precision in cm
         uint8_t num_sats;                   ///< Number of visible satellites
@@ -246,6 +247,22 @@ public:
     }
     float true_heading() const {
         return true_heading(primary_instance);
+    }
+
+    // true heading status
+    bool true_heading_ok(uint8_t instance) const {
+        return state[instance].true_heading_ok;
+    }
+    bool true_heading_ok() const {
+        return true_heading_ok(primary_instance);
+    }
+
+    // true heading timestamp
+    uint32_t true_heading_ms(uint8_t instance) const {
+        return state[instance].true_heading_ms;
+    }
+    uint32_t true_heading_ms() const {
+        return true_heading_ms(primary_instance);
     }
 
     // number of locked satellites

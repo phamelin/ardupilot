@@ -31,9 +31,6 @@ private:
     // Compass instance id
     uint8_t _instance;
 
-    // Pointer to AHRS (to access GPS and attitude sensor)
-    AP_AHRS *_ahrs;
-
     // Last GPS message timestamp
     uint32_t _last_true_heading_ms;
 };

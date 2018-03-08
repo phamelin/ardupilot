@@ -42,6 +42,8 @@
 #define COMPASS_MAX_INSTANCES 3
 #define COMPASS_MAX_BACKEND   3
 
+class AP_AHRS;
+
 class Compass
 {
 friend class AP_Compass_Backend;
@@ -289,6 +291,14 @@ public:
     uint16_t get_offsets_max(void) const {
         return (uint16_t)_offset_max.get();
     }
+
+    /**
+     * Provide handle to the AHRS.
+     *
+     * Some compass implementation requires an AHRS to work properly
+     * (e.g. AP_Compass_GPS).
+     */
+    void set_ahrs(AP_AHRS* ahrs);
 
 private:
     /// Register a new compas driver, allocating an instance number

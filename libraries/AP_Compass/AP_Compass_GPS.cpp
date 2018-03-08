@@ -1,7 +1,7 @@
 #include "AP_Compass_GPS.h"
 
 #include <AP_HAL/AP_HAL.h>
-#include "../../ArduCopter/Copter.h"
+#include <AP_AHRS/AP_AHRS.h>
 
 #include <unistd.h>
 
@@ -11,7 +11,6 @@ extern const AP_HAL::HAL &hal;
 AP_Compass_GPS::AP_Compass_GPS(Compass &compass):
     AP_Compass_Backend(compass),
     _instance(0),
-    _ahrs(nullptr),
     _last_true_heading_ms(0)
 {
 
@@ -41,9 +40,10 @@ bool AP_Compass_GPS::init()
 
 void AP_Compass_GPS::read()
 {
+    // Make sure we can access the AHRS
     if(!_ahrs)
     {
-        _ahrs = &copter.get_ahrs();
+        return;
     }
 
     // Make sure that there's a new valid GPS true heading data available

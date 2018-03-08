@@ -1179,3 +1179,10 @@ bool Compass::consistent() const
     return true;
 }
 
+void Compass::set_ahrs(AP_AHRS* ahrs)
+{
+    // Pass the AP_AHRS pointer to the backends
+    for (uint8_t i=0; i< _backend_count; i++) {
+        _backends[i]->set_ahrs(ahrs);
+    }
+}

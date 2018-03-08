@@ -6,7 +6,8 @@
 extern const AP_HAL::HAL& hal;
 
 AP_Compass_Backend::AP_Compass_Backend(Compass &compass) :
-    _compass(compass)
+    _compass(compass),
+    _ahrs(nullptr)
 {
     _sem = hal.util->new_semaphore();    
 }
@@ -128,4 +129,9 @@ bool AP_Compass_Backend::is_external(uint8_t instance)
 void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
 {
     _compass._state[instance].rotation = rotation;
+}
+
+void AP_Compass_Backend::set_ahrs(AP_AHRS* ahrs)
+{
+    _ahrs = ahrs;
 }

@@ -22,6 +22,8 @@
 #include "AP_Compass.h"
 
 class Compass;  // forward declaration
+class AP_AHRS;
+
 class AP_Compass_Backend
 {
 public:
@@ -64,6 +66,13 @@ public:
 		DEVTYPE_QMC5883L = 0x0D,
     };
 
+    /**
+     * Provide handle to the AHRS.
+     *
+     * Some compass implementation requires an AHRS to work properly
+     * (e.g. AP_Compass_GPS).
+     */
+    void set_ahrs(AP_AHRS* ahrs);
 
 protected:
 
@@ -106,6 +115,10 @@ protected:
 
     // semaphore for access to shared frontend data
     AP_HAL::Semaphore *_sem;
+
+    // Pointer to the AHRS. Some implementation may require it (e.g. GPS-based
+    // compass)
+    AP_AHRS* _ahrs;
 
 private:
     void apply_corrections(Vector3f &mag, uint8_t i);

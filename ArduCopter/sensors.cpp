@@ -107,6 +107,10 @@ void Copter::init_compass()
         return;
     }
     ahrs.set_compass(&compass);
+
+    // Provide the AHRS pointer to the compass, because it is required for
+    // GPS-based compass, i.e. AP_Compass_GPS.
+    compass.set_ahrs(&ahrs);
 }
 
 // initialise optical flow sensor

@@ -496,6 +496,11 @@ bool Compass::_add_backend(AP_Compass_Backend *backend, const char *name, bool e
         AP_HAL::panic("Too many compass backends");
     }
 
+    if(name) {
+        hal.console->printf("Compass backend #%u added: %s %s\n", _backend_count, name, (external ? "external" : "internal"));
+    } else {
+        hal.console->printf("Compass backend #%u added: unknown %s\n", _backend_count, (external ? "external" : "internal"));
+    }
     _backends[_backend_count++] = backend;
 
     return true;

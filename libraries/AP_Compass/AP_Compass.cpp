@@ -605,8 +605,8 @@ void Compass::_detect_backends(void)
                     AP_Compass_LIS3MDL::name, both_i2c_external);
 
         // GPS-based compass
-        ADD_BACKEND(DRIVER_GPS, new AP_Compass_GPS(*this), nullptr, true);
-        
+        ADD_BACKEND(DRIVER_GPS, AP_Compass_GPS::detect(*this), "GPS", true);
+
 #if !HAL_MINIMIZE_FEATURES
         // AK09916 on ICM20948
         ADD_BACKEND(DRIVER_ICM20948, AP_Compass_AK09916::probe_ICM20948(*this,

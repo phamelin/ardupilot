@@ -453,9 +453,11 @@ Compass::Compass(void) :
         _state[i].last_update_usec = 0;
     }
 
-    // default device ids to zero.  init() method will overwrite with the actual device ids
     for (uint8_t i=0; i<COMPASS_MAX_INSTANCES; i++) {
+        // default device ids to zero.  init() method will overwrite with the actual device ids
         _state[i].dev_id = 0;
+        // By default, all compass backend require calibration
+        _state[i].require_cal = true;
     }
 }
 
@@ -1016,6 +1018,9 @@ bool Compass::configured(uint8_t i)
     if (i > get_count()) {
         return false;
     }
+
+    // If compass do not require calibration, skip offset checking
+    if(!_state[i].require_cal) return true;
 
     // exit immediately if all offsets are zero
     if (is_zero(get_offsets(i).length())) {

@@ -392,6 +392,7 @@ private:
     struct mag_state {
         AP_Int8     external;
         bool        healthy;
+        bool        require_cal;
         AP_Int8     orientation;
         AP_Vector3f offset;
         AP_Vector3f diagonals;

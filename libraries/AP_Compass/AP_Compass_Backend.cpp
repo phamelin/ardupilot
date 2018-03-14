@@ -131,6 +131,11 @@ void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
     _compass._state[instance].rotation = rotation;
 }
 
+void AP_Compass_Backend::set_require_cal(uint8_t instance, bool require_cal)
+{
+    _compass._state[instance].require_cal = require_cal;
+}
+
 void AP_Compass_Backend::set_ahrs(AP_AHRS* ahrs)
 {
     _ahrs = ahrs;

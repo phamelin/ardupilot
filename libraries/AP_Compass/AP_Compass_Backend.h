@@ -110,6 +110,9 @@ protected:
     // set rotation of an instance
     void set_rotation(uint8_t instance, enum Rotation rotation);
 
+    // set flag if compass require calibration
+    void set_require_cal(uint8_t instance, bool require_cal);
+
     // access to frontend
     Compass &_compass;
 

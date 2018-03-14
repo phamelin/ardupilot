@@ -35,6 +35,8 @@ bool AP_Compass_GPS::init()
     _instance = register_compass();
     _compass._setup_earth_field();
     hal.console->printf("GPS compass initialized.\n");
+    set_external(_instance, true);
+    set_require_cal(_instance, false);
     return true;
 }
 

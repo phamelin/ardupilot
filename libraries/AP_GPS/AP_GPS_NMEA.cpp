@@ -466,7 +466,7 @@ bool AP_GPS_NMEA::_term_complete()
             // - M : Manual input
             // - S : Simulator
             // - V : Data not valid
-            if(_term[0] == 'A' || _term[0] == 'E')
+            if(_term[0] == 'A')
             {
                 _new_true_heading_ok = true;
             }

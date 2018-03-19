@@ -474,6 +474,7 @@ bool AP_GPS_NMEA::_term_complete()
             {
                 _new_true_heading_ok = false;
             }
+            _gps_data_good = true;
             break;
         }
     }

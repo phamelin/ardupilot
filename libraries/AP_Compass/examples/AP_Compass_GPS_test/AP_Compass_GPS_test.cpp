@@ -51,15 +51,14 @@ void setup(void)
 
     hal.console->printf("\n### AP_Compass_GPS test program ###\n\n");
 
-    hal.console->printf("Loading parameters...");
-    if(AP_Param::load_all(false))
-    {
-        hal.console->printf("Success!\n");
-    }
-    else
-    {
-        hal.console->printf("Failed!\n");
-    }
+    // Force usage of only compass #1
+    AP_Param::set_object_value(&compass, compass.var_info, "USE", 1);
+    AP_Param::set_object_value(&compass, compass.var_info, "USE2", 0);
+    AP_Param::set_object_value(&compass, compass.var_info, "USE3", 0);
+    AP_Param::set_object_value(&compass, compass.var_info, "PRIMARY", 0);
+
+    // Force usage of only gps-based compass
+    AP_Param::set_object_value(&compass, compass.var_info, "TYPEMASK", 0x1FFF);
 
     hal.console->printf("Initializing Compass...\n");
     compass.init();
@@ -86,7 +85,10 @@ void loop(void)
     static uint32_t last_print, last_compass_gps;
     uint32_t now = AP_HAL::micros();
 
-    ahrs.update();
+    ins.wait_for_sample();
+
+    ins.update();
+    ahrs.update(true);
 
     // Read compass and GPS at 10Hz
     if (now - last_compass_gps >= 100000 /* 100ms : 10hz */)
@@ -104,13 +106,14 @@ void loop(void)
             Vector3f field = compass.get_field(i);
             float heading = compass.calculate_heading(ahrs.get_rotation_body_to_ned(), i);
             hal.console->printf(
-                    "COMPASS %u magx:%4.1f magy:%4.1f magz:%4.1f hdg:%4.1f healthy:%s\n",
+                    "COMPASS %u magx:%4.1f magy:%4.1f magz:%4.1f hdg:%4.1f healthy:%s configured:%s\n",
                     (uint16_t)i,
                     (double)field.x,
                     (double)field.y,
                     (double)field.z,
                     (double)ToDeg(heading),
-                    (compass.healthy(i) ? "YES" : "NO"));
+                    (compass.healthy(i) ? "YES" : "NO"),
+                    (compass.configured(i) ? "YES" : "NO"));
         }
 
         hal.console->printf(
@@ -118,6 +121,10 @@ void loop(void)
                 (double)ToDeg(ahrs.roll),
                 (double)ToDeg(ahrs.pitch),
                 (double)ToDeg(ahrs.yaw));
+
+        hal.console->printf(
+                "EKF2 use_compass:%s\n",
+                (vehicle.EKF2.use_compass() ? "YES" : "NO"));
 
         // Acquire location
         const Location &loc = gps.location();

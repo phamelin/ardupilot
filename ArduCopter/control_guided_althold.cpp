@@ -3,8 +3,8 @@
 // GUIDED_ALTHOLD mode's times out after 1 second with no updates
 #define GUIDED_ALTHOLD_TIMEOUT_MS 1000
 
-// Smoothing gain for attitude control (12 = max)
-#define GUIDED_ALTHOLD_SMOOTHING_GAIN 12.0f
+// Smoothing gain for attitude control
+#define GUIDED_ALTHOLD_SMOOTHING_GAIN 400.0f
 
 // Guided althold state variables
 struct

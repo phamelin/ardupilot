@@ -217,7 +217,7 @@ void Copter::guided_althold_run()
 #endif
 
         // call attitude controller
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, GUIDED_ALTHOLD_SMOOTHING_GAIN);
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);
 
         // adjust climb rate using rangefinder
         if (rangefinder_alt_ok()) {

@@ -636,8 +636,8 @@ bool AP_Arming_Copter::arm_checks(bool display_failure, bool arming_from_gcs)
         return false;
     }
 
-    // check compass health
-    if (!_compass.healthy()) {
+    // check compass health if enabled
+    if (!_compass.healthy() && copter.g.compass_enabled) {
         if (display_failure) {
             gcs_send_text(MAV_SEVERITY_CRITICAL,"Arm: Compass not healthy");
         }

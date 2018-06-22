@@ -496,6 +496,9 @@ enum DevOptions {
 
 // for mavlink SET_POSITION_TARGET messages
 #define MAVLINK_SET_POS_TYPE_MASK_POS_IGNORE      ((1<<0) | (1<<1) | (1<<2))
+#define MAVLINK_SET_POS_TYPE_MASK_VEL_X_IGNORE    (1<<3)
+#define MAVLINK_SET_POS_TYPE_MASK_VEL_Y_IGNORE    (1<<4)
+#define MAVLINK_SET_POS_TYPE_MASK_VEL_Z_IGNORE    (1<<5)
 #define MAVLINK_SET_POS_TYPE_MASK_VEL_IGNORE      ((1<<3) | (1<<4) | (1<<5))
 #define MAVLINK_SET_POS_TYPE_MASK_ACC_IGNORE      ((1<<6) | (1<<7) | (1<<8))
 #define MAVLINK_SET_POS_TYPE_MASK_FORCE           (1<<9)

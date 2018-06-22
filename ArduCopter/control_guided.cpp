@@ -13,6 +13,9 @@
 
 static Vector3f guided_pos_target_cm;       // position target (used by posvel controller only)
 static Vector3f guided_vel_target_cms;      // velocity target (used by velocity controller and posvel controller)
+static bool guided_vel_use_x;               // use x-component of velocity target (used by velocity controller only)
+static bool guided_vel_use_y;               // use y-component of velocity target (used by velocity controller only)
+static bool guided_vel_use_z;               // use z-component of velocity target (used by velocity controller only)
 static uint32_t posvel_update_time_ms;      // system time of last target update to posvel controller (i.e. position and velocity update)
 static uint32_t vel_update_time_ms;         // system time of last target update to velocity controller
 
@@ -241,7 +244,7 @@ bool Copter::guided_set_destination(const Location_Class& dest_loc, bool use_yaw
 }
 
 // guided_set_velocity - sets guided mode's target velocity
-void Copter::guided_set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
+void Copter::guided_set_velocity(const Vector3f& velocity, bool use_vx, bool use_vy, bool use_vz, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
 {
     // check we are in velocity control mode
     if (guided_mode != Guided_Velocity) {
@@ -252,6 +255,9 @@ void Copter::guided_set_velocity(const Vector3f& velocity, bool use_yaw, float y
     guided_set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
 
     // record velocity target
+    guided_vel_use_x = use_vx;
+    guided_vel_use_y = use_vy;
+    guided_vel_use_z = use_vz;
     guided_vel_target_cms = velocity;
     vel_update_time_ms = millis();
 
@@ -491,6 +497,26 @@ void Copter::guided_vel_control_run()
             set_auto_yaw_rate(0.0f);
         }
     } else {
+
+        // If vz is not used, compute desired climb rate from pilot's input
+        if(!guided_vel_use_z) {
+            // get pilot desired climb rate in cm/s
+            float target_climb_rate_cms = get_pilot_desired_climb_rate(channel_throttle->get_control_in());
+
+            // constraint climb rate
+            target_climb_rate_cms = constrain_float(target_climb_rate_cms, -fabsf(wp_nav->get_speed_down()), wp_nav->get_speed_up());
+
+            // get avoidance adjusted climb rate
+            guided_vel_target_cms.z = get_avoidance_adjusted_climbrate(target_climb_rate_cms);
+        }
+
+        // For now, there's no easy way to convert pilot's input to target
+        // velocity for the guided velocity controller. So, this implementation
+        // doesn't support pilot's input for x-y velocity. If the vx-vy are not
+        // supplied trough Mavlink, then we set them to zero.
+        if(!guided_vel_use_x) guided_vel_target_cms.x = 0.0f;
+        if(!guided_vel_use_y) guided_vel_target_cms.y = 0.0f;
+
         guided_set_desired_velocity_with_accel_and_fence_limits(guided_vel_target_cms);
     }
 

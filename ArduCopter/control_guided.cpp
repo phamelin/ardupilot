@@ -491,34 +491,36 @@ void Copter::guided_vel_control_run()
     uint32_t tnow = millis();
     if (tnow - vel_update_time_ms > GUIDED_POSVEL_TIMEOUT_MS) {
         if (!pos_control->get_desired_velocity().is_zero()) {
-            guided_set_desired_velocity_with_accel_and_fence_limits(Vector3f(0.0f, 0.0f, 0.0f));
+            guided_vel_target_cms.zero();
+            guided_vel_use_x = false;
+            guided_vel_use_y = false;
+            guided_vel_use_z = false;
         }
         if (auto_yaw_mode == AUTO_YAW_RATE) {
             set_auto_yaw_rate(0.0f);
         }
-    } else {
-
-        // If vz is not used, compute desired climb rate from pilot's input
-        if(!guided_vel_use_z) {
-            // get pilot desired climb rate in cm/s
-            float target_climb_rate_cms = get_pilot_desired_climb_rate(channel_throttle->get_control_in());
-
-            // constraint climb rate
-            target_climb_rate_cms = constrain_float(target_climb_rate_cms, -fabsf(wp_nav->get_speed_down()), wp_nav->get_speed_up());
-
-            // get avoidance adjusted climb rate
-            guided_vel_target_cms.z = get_avoidance_adjusted_climbrate(target_climb_rate_cms);
-        }
-
-        // For now, there's no easy way to convert pilot's input to target
-        // velocity for the guided velocity controller. So, this implementation
-        // doesn't support pilot's input for x-y velocity. If the vx-vy are not
-        // supplied trough Mavlink, then we set them to zero.
-        if(!guided_vel_use_x) guided_vel_target_cms.x = 0.0f;
-        if(!guided_vel_use_y) guided_vel_target_cms.y = 0.0f;
-
-        guided_set_desired_velocity_with_accel_and_fence_limits(guided_vel_target_cms);
     }
+
+    // If vz is not used, compute desired climb rate from pilot's input
+    if(!guided_vel_use_z) {
+        // get pilot desired climb rate in cm/s
+        float target_climb_rate_cms = get_pilot_desired_climb_rate(channel_throttle->get_control_in());
+
+        // constraint climb rate
+        target_climb_rate_cms = constrain_float(target_climb_rate_cms, -fabsf(wp_nav->get_speed_down()), wp_nav->get_speed_up());
+
+        // get avoidance adjusted climb rate
+        guided_vel_target_cms.z = get_avoidance_adjusted_climbrate(target_climb_rate_cms);
+    }
+
+    // For now, there's no easy way to convert pilot's input to target
+    // velocity for the guided velocity controller. So, this implementation
+    // doesn't support pilot's input for x-y velocity. If the vx-vy are not
+    // supplied trough Mavlink, then we set them to zero.
+    if(!guided_vel_use_x) guided_vel_target_cms.x = 0.0f;
+    if(!guided_vel_use_y) guided_vel_target_cms.y = 0.0f;
+
+    guided_set_desired_velocity_with_accel_and_fence_limits(guided_vel_target_cms);
 
     // call velocity controller which includes z axis controller
     pos_control->update_vel_controller_xyz(ekfNavVelGainScaler);

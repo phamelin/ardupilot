@@ -959,6 +959,99 @@ def wait_set_attitude_target(mavproxy, mav, roll_deg, pitch_deg, yaw_rate_degs, 
     print("Failed to attain roll/pitch/yaw rate %.2f/%.2f/%.2f" % (roll_deg, pitch_deg, yaw_rate_degs))
     return False
 
+def send_guided_velocity_target(mavproxy, mav, vx=None, vy=None, vz=None, yaw_rate=None):
+    """Send guided velocity target (vx,vy,vz: m/s and yaw_rate:rad/s)"""
+
+    # type_mask ignore all by default
+    type_mask = 0xffff
+    
+    # Adjust type_mask for provided arguments
+    if vx is None:
+        vx = 0
+    else:
+        type_mask = type_mask & ~(1 << 3)
+
+    if vy is None:
+        vy = 0
+    else:
+        type_mask = type_mask & ~(1 << 4)
+
+    if vz is None:
+        vz = 0
+    else:
+        type_mask = type_mask & ~(1 << 5)
+
+    if yaw_rate is None:
+        yaw_rate = 0
+    else:
+        type_mask = type_mask & ~(1 << 11)
+
+    mav.mav.set_position_target_local_ned_send(
+                                      0,                    # system time in milliseconds
+                                      1,                    # target system
+                                      0,                    # target component
+                                      8,                    # coordinate frame (8 = MAV_FRAME_BODY_NED)
+                                      type_mask,            # type mask
+                                      0,                    # x position (m)
+                                      0,                    # y position (m)
+                                      0,                    # z position (m)
+                                      vx,                   # x velocity (m/s)
+                                      vy,                   # y velocity (m/s)
+                                      vz,                   # z velocity (m/s)
+                                      0,                    # x acceleration (m/s^2)
+                                      0,                    # y acceleration (m/s^2)
+                                      0,                    # z acceleration (m/s^2)
+                                      0,                    # yaw (rad)
+                                      yaw_rate)             # yaw rate (rad/s)
+
+def wait_guided_velocity_target(mavproxy, mav, vx=None, vy=None, vz=None, yaw_rate=None, timeout=30):
+    """Send guided velocity target (vx,vy,vz: m/s and yaw_rate:rad/s) and wait for completion"""
+    tstart = get_sim_time(mav)
+    while get_sim_time(mav) < tstart + timeout:
+
+        tol_vel = 0.05   # 5 cm/s tolerence on velocity
+        tol_yaw_rate = 1.0/180.0*3.1416 # 1 deg/s
+
+        send_guided_velocity_target(mavproxy, mav, vx, vy, vz, yaw_rate)
+
+        pos_ned = mav.recv_match(type='LOCAL_POSITION_NED', blocking=True)
+        att = mav.recv_match(type='ATTITUDE', blocking=True)
+
+        # Compute measured velocities in body frame with measured yaw
+        body_vx =  pos_ned.vx*math.cos(att.yaw) + pos_ned.vy*math.sin(att.yaw)
+        body_vy = -pos_ned.vx*math.sin(att.yaw) + pos_ned.vy*math.cos(att.yaw)
+
+        print("Received body velocity vx=%.2f m/s, vy=%.2f m/s, vz=%.2f m/s, yaw_rate=%.2f rad/s" % (body_vx, body_vy, pos_ned.vz, att.yawspeed))
+        
+        # Compare target vs measured velocity (if required)
+        if vx is None:
+            vx_err = 0.0
+        else:
+            vx_err = math.fabs(vx - body_vx)
+
+        if vy is None:
+            vy_err = 0.0
+        else:
+            vy_err = math.fabs(vy - body_vy)
+ 
+        if vz is None:
+            vz_err = 0.0
+        else:
+            vz_err = math.fabs(vz - pos_ned.vz)
+
+        if yaw_rate is None:
+            yaw_rate_err = 0.0
+        else:
+            yaw_rate_err = math.fabs(yaw_rate - att.yawspeed)
+
+        if(vx_err <= tol_vel and vy_err <= tol_vel and vz_err <= tol_vel and yaw_rate_err <= tol_yaw_rate):
+            print("Attained target velocity in NED")
+            send_guided_velocity_target(mavproxy, mav, vx=0, vy=0, vz=0, yaw_rate=0)
+            return True
+
+    return False
+
+
 def fly_guided_althold_test(mavproxy, mav):
     """Fly in GUIDED_ALTHOLD with Mavlink set points."""
     print("### Request GUIDED_ALTHOLD mode")
@@ -1021,6 +1114,48 @@ def fly_guided_althold_test(mavproxy, mav):
     wait_roll(mav, 0.0, 0.5, timeout=10)
 
     return True
+
+def fly_guided_velocity_test(mavproxy, mav):
+    """Fly in GUIDED (velocity controller) with Mavlink set points."""
+    
+    success = True
+    
+    # Disable GCS failsafe to simpligy test logic
+    mavproxy.send("param set FS_GCS_ENABLE 0\n")
+
+    print("### Request GUIDED mode")
+    mavproxy.send("mode guided\n")
+    wait_mode(mav, 'GUIDED')
+
+    print("### Send target velocity vx=0, vy=0 and yaw_rate=0")
+    send_guided_velocity_target(mavproxy, mav, vx=0, vy=0, yaw_rate=0)
+
+    print("### Check that pilot has control of the climb rate (vz): climb to 20m")
+    change_alt(mavproxy, mav, 20.0)
+    
+    print("### Send target velocity vx=0, vy=1.0 and yaw_rate=0")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=0, vy=1.0, yaw_rate=0)
+
+    print("### Send target velocity vx=1.0, vy=0.0 and yaw_rate=0")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=1.0, vy=0.0, yaw_rate=0)
+
+    print("### Send target velocity vx=1.0, vy=1.0 and yaw_rate=0")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=1.0, vy=1.0, yaw_rate=0)
+
+    print("### Send target velocity vx=0.0, vy=0.0 and yaw_rate=0.2")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=0.0, vy=0.0, yaw_rate=0.2)
+
+    print("### Send target velocity vx=1.0, vy=1.0 and yaw_rate=0.2")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=1.0, vy=1.0, yaw_rate=0.2)
+
+    print("### Send target velocity vx=1.0, vy=1.0, vz=-1.0 and yaw_rate=-0.2")
+    success = success and wait_guided_velocity_target(mavproxy, mav, vx=1.0, vy=1.0, vz=-1.0, yaw_rate=-0.2)
+
+    # Reactivate GCS failsafe
+    mavproxy.send("param set FS_GCS_ENABLE 1\n")
+    
+    return success
+
 
 def load_mission_from_file(mavproxy, mav, filename):
     """Load a mission from a file to flight controller."""
@@ -1140,6 +1275,12 @@ def fly_ArduCopter(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fal
         print("# Takeoff")
         if not takeoff(mavproxy, mav, 10):
             failed_test_msg = "takeoff failed"
+            print(failed_test_msg)
+            failed = True
+
+        print("# Guided (velocity controller)")
+        if not fly_guided_velocity_test(mavproxy, mav):
+            failed_test_msg = "Guided (velocity controller) failed"
             print(failed_test_msg)
             failed = True
 

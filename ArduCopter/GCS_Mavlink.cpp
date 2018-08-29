@@ -735,8 +735,8 @@ GCS_MAVLINK_Copter::data_stream_send(void)
         // GPS_RAW is needed for SITL autotest
         send_message(MSG_GPS_RAW);
 
-        // Unload communication in GUIDED_ALTHOLD
-        if(copter.control_mode != GUIDED_ALTHOLD) {
+        // Unload communication in GUIDED_ALTHOLD and GUIDED
+        if((copter.control_mode != GUIDED_ALTHOLD) && (copter.control_mode != GUIDED)) {
             send_message(MSG_EXTENDED_STATUS2); // MEMINFO
             send_message(MSG_CURRENT_WAYPOINT);
             send_message(MSG_NAV_CONTROLLER_OUTPUT);

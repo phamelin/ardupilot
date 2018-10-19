@@ -143,6 +143,9 @@ public:
     /// get_wp_acceleration - returns acceleration in cm/s/s during missions
     float get_wp_acceleration() const { return _wp_accel_cms.get(); }
 
+    /// get jerk to be used during missions (use loiter param)
+    float get_wp_jerk() const { return _loiter_jerk_max_cmsss.get(); }
+
     /// get_wp_destination waypoint using position vector (distance from home in cm)
     const Vector3f &get_wp_destination() const { return _destination; }
 

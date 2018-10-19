@@ -110,7 +110,7 @@ void Copter::guided_vel_control_start()
     // initialise horizontal speed, acceleration and jerk
     pos_control->set_speed_xy(wp_nav->get_speed_xy());
     pos_control->set_accel_xy(wp_nav->get_wp_acceleration());
-    pos_control->set_jerk_xy_to_default();
+    pos_control->set_jerk_xy(wp_nav->get_wp_jerk());
 
     // initialize vertical speeds and acceleration
     pos_control->set_speed_z(-g.pilot_velocity_z_max, g.pilot_velocity_z_max);
